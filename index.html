@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — HYPRRIDE</title>
+<meta name="description" content="HYPRRIDE admin dashboard for managing bookings, fleet, and operations.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23e63b3b'/%3E%3Ctext x='32' y='42' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23120d0d' text-anchor='middle'%3EHR%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css?v=3">
+</head>
+<body class="admin-body">
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-bg"></div>
+  <div class="login-card">
+    <div class="login-glow"></div>
+    <div class="login-brand">
+      <span class="brand-mark">HR</span>
+      <span class="brand-text">HYPRRIDE<small>ADMIN PANEL</small></span>
+    </div>
+    <h1 class="login-title">Welcome back</h1>
+    <p class="login-sub" id="loginSub">Enter the admin password to access the dashboard.</p>
+
+    <!-- Email sign-in — activates when Firebase is configured in admin-auth.js -->
+    <form class="login-form" id="otpForm" hidden>
+      <div class="login-field">
+        <label for="loginEmail">Staff email</label>
+        <div class="login-input-wrap">
+          <input type="email" id="loginEmail" placeholder="you@hyprride.com" autocomplete="email" required>
+        </div>
+        <p class="login-err" id="otpErr"></p>
+      </div>
+      <button type="submit" class="login-btn" id="otpSendBtn">Email me a one-time sign-in link</button>
+      <p class="login-sent" id="otpSent" hidden>✉️ Link sent — open the email <b>on this device</b> and tap the link to enter the dashboard.</p>
+    </form>
+
+    <form class="login-form" id="loginForm">
+      <div class="login-field">
+        <label for="loginPass">Password</label>
+        <div class="login-input-wrap">
+          <input type="password" id="loginPass" placeholder="Enter admin password" autocomplete="current-password" required>
+          <button type="button" class="login-eye" id="loginEye" aria-label="Toggle password visibility">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <p class="login-err" id="loginErr"></p>
+      </div>
+      <button type="submit" class="login-btn">Sign in to Dashboard</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div class="dashboard" id="dashboard" hidden>
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-mark">HR</span>
+      <span class="brand-text">HYPRRIDE<small>ADMIN</small></span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="overview" id="navOverview">
+        <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Overview
+      </button>
+      <button class="nav-item" data-tab="bookings" id="navBookings">
+        <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
+        Bookings
+      </button>
+      <button class="nav-item" data-tab="fleet" id="navFleet">
+        <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-7h4l3 5M13.5 10L12 7H9.5"/></svg>
+        Fleet
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="https://hyprride.com" class="sidebar-link">← Back to Site</a>
+      <button class="sidebar-link logout-btn" id="logoutBtn">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- ── Mobile top bar ── -->
+  <div class="mobile-topbar" id="mobileTopbar">
+    <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">
+      <span></span><span></span><span></span>
+    </button>
+    <span class="mobile-brand">HYPRRIDE Admin</span>
+  </div>
+
+  <!-- ── Main content ── -->
+  <main class="main-content" id="mainContent">
+
+    <!-- TAB: Overview -->
+    <section class="tab-panel active" id="tabOverview">
+      <div class="tab-header">
+        <h1 class="tab-title">Dashboard Overview</h1>
+        <p class="tab-sub">Welcome back. Here's what's happening with your business.</p>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card stat-total">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Bookings</span>
+            <span class="stat-value" id="statTotal">0</span>
+          </div>
+        </div>
+        <div class="stat-card stat-pending">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+          <div class="stat-info">
+            <span class="stat-label">Pending</span>
+            <span class="stat-value" id="statPending">0</span>
+          </div>
+        </div>
+        <div class="stat-card stat-confirmed">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div class="stat-info">
+            <span class="stat-label">Confirmed</span>
+            <span class="stat-value" id="statConfirmed">0</span>
+          </div>
+        </div>
+        <div class="stat-card stat-revenue">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 8h6M9 11h6M9.2 8c2.3 0 3.5 1 3.5 2.6s-1.2 2.6-3.5 2.6L14 16.5"/></svg></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Revenue</span>
+            <span class="stat-value" id="statRevenue">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="glass-card">
+          <h3 class="card-title">Popular Vehicles</h3>
+          <div class="popular-list" id="popularVehicles">
+            <p class="empty-state">No booking data yet</p>
+          </div>
+        </div>
+        <div class="glass-card">
+          <h3 class="card-title">Recent Bookings</h3>
+          <div class="recent-list" id="recentBookings">
+            <p class="empty-state">No bookings yet</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Bookings -->
+    <section class="tab-panel" id="tabBookings">
+      <div class="tab-header">
+        <h1 class="tab-title">Booking Management <span class="live-pill"><span class="live-dot"></span>LIVE</span></h1>
+        <div class="tab-actions">
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="pending">Pending</button>
+            <button class="filter-btn" data-filter="confirmed">Confirmed</button>
+            <button class="filter-btn" data-filter="completed">Completed</button>
+            <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+          </div>
+          <div class="search-wrap">
+            <input type="text" class="search-input" id="bookingSearch" placeholder="Search by name or phone…">
+          </div>
+        </div>
+      </div>
+      <div class="bookings-table-wrap">
+        <table class="bookings-table" id="bookingsTable">
+          <thead>
+            <tr>
+              <th>Rider</th>
+              <th>Vehicle</th>
+              <th>Pickup</th>
+              <th>Duration</th>
+              <th>Type</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsBody">
+          </tbody>
+        </table>
+        <div class="empty-bookings" id="emptyBookings" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+          <h3>No bookings found</h3>
+          <p>Bookings will appear here when customers submit booking requests.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Fleet -->
+    <section class="tab-panel" id="tabFleet">
+      <div class="tab-header">
+        <h1 class="tab-title">Fleet Management</h1>
+        <p class="tab-sub">Manage vehicle availability and view fleet details.</p>
+      </div>
+      <div class="fleet-grid" id="fleetGrid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════ Booking Detail Modal ══════════ -->
+<div class="modal-overlay" id="bookingModal" hidden>
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal-content" id="modalContent">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<script src="admin.js?v=3" defer></script>
+<script src="admin-auth.js?v=3" defer></script>
+</body>
+</html>
