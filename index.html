@@ -15,7 +15,7 @@
 <body class="admin-body">
 
 <!-- ══════════ LOGIN SCREEN ══════════ -->
-<div class="login-screen" id="loginScreen">
+<div class="login-screen" id="loginScreen" hidden>
   <div class="login-bg"></div>
   <div class="login-card">
     <div class="login-glow"></div>
@@ -56,7 +56,7 @@
 </div>
 
 <!-- ══════════ DASHBOARD ══════════ -->
-<div class="dashboard" id="dashboard" hidden>
+<div class="dashboard" id="dashboard">
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar" id="sidebar">
@@ -80,7 +80,7 @@
     </nav>
     <div class="sidebar-footer">
       <a href="https://hyprride.com" class="sidebar-link">← Back to Site</a>
-      <button class="sidebar-link logout-btn" id="logoutBtn">Sign out</button>
+      <button class="sidebar-link logout-btn" id="logoutBtn" hidden>Sign out</button>
     </div>
   </aside>
 
@@ -213,7 +213,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=3" defer></script>
-<script src="admin-auth.js?v=4" defer></script>
+<script src="admin.js?v=4" defer></script>
 </body>
 </html>

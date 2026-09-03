@@ -37,9 +37,9 @@
     refreshAll();
   }
 
-  if (isLoggedIn()) {
-    showDashboard();
-  }
+  /* AUTH DISABLED (2026-09-03, user request): page opens straight to the dashboard.
+     To re-enable, change the line below back to: if (isLoggedIn()) showDashboard(); */
+  showDashboard();
 
   // Password eye toggle
   const loginEye = $('loginEye');
