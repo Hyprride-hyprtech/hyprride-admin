@@ -6,7 +6,8 @@
       enable "Email/Password" AND switch ON "Email link (passwordless sign-in)" inside it.
    2. Authentication → Settings → Authorized domains → add the domain the admin runs on
       (e.g. admin.hyprride.com and/or your-admin-site.netlify.app). localhost is allowed by default.
-   3. Staff addresses live in ALLOWED_EMAILS below — edit that list to add/remove people.
+   3. Anyone with an @hyprride.com address can sign in (ALLOWED_DOMAINS). Non-company
+      addresses go in ALLOWED_EMAILS below — edit those lists to add/remove people.
 
    If Firebase is unreachable (offline, blocked, misconfigured), the password screen
    comes back automatically so staff are never locked out. */
@@ -22,14 +23,25 @@
     appId: '1:610300032788:web:8c883b2cf3d5c7275af401',
   };
 
+  /* every address on these domains is staff */
+  const ALLOWED_DOMAINS = ['hyprride.com'];
+
+  /* extra individual addresses (also lists company staff for reference) */
   const ALLOWED_EMAILS = [
     'tech@hyprride.com',
+    'mithilmani@hyprride.com',
+    'dhruva@hyprride.com',
     'hyprride@gmail.com',
   ];
 
   const $ = id => document.getElementById(id);
   const otpForm = $('otpForm'), loginForm = $('loginForm'), sub = $('loginSub');
-  const allowed = email => ALLOWED_EMAILS.includes((email || '').trim().toLowerCase());
+  const allowed = email => {
+    const e = (email || '').trim().toLowerCase();
+    const at = e.lastIndexOf('@');
+    const domain = at > 0 ? e.slice(at + 1) : '';
+    return ALLOWED_EMAILS.includes(e) || (domain !== '' && ALLOWED_DOMAINS.includes(domain));
+  };
 
   if (!FIREBASE_CONFIG) return; /* email login off — password fallback stays */
 
