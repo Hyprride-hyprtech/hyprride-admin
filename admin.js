@@ -2,6 +2,87 @@
 (function () {
   'use strict';
 
+  /* ────────────── Firestore — shared booking board (same data on every staff device) ────────────── */
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyBhB5japKN3iygUQNGJxkz7m0dBSHYAMBM',
+    authDomain: 'hyprride-7aaac.firebaseapp.com',
+    projectId: 'hyprride-7aaac',
+    storageBucket: 'hyprride-7aaac.firebasestorage.app',
+    messagingSenderId: '508353170229',
+    appId: '1:508353170229:web:b3f28fff8a6202aceb5a7c',
+  };
+  let db = null;
+  try {
+    if (window.firebase && typeof firebase.firestore === 'function') {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      db.settings({ ignoreUndefinedProperties: true });
+    } else {
+      console.warn('Firebase SDK not loaded — running on local data only');
+    }
+  } catch (err) {
+    console.error('Firestore init failed', err);
+  }
+
+  function cloudUpdate(id, patch) {
+    if (!db) return;
+    db.collection('bookings').doc(id).update(patch)
+      .catch(err => { console.error('Cloud update failed', err); toast('⚠ Could not sync to cloud'); });
+  }
+  function cloudDelete(id) {
+    if (!db) return;
+    db.collection('bookings').doc(id).delete()
+      .catch(err => { console.error('Cloud delete failed', err); toast('⚠ Could not sync to cloud'); });
+  }
+  function cloudFleet(fleet) {
+    if (!db) return;
+    db.collection('settings').doc('fleet').set(fleet)
+      .catch(err => { console.error('Cloud fleet save failed', err); toast('⚠ Could not sync to cloud'); });
+  }
+
+  /* Every booking that arrives from the cloud is coerced to the exact shape the renderer expects.
+     The public booking form can write to Firestore, so nothing inside a document is trusted:
+     strings are length-capped, numbers default to 0, phone is digits only, status is whitelisted,
+     and the id is the real Firestore document id restricted to [A-Za-z0-9_-] so it is safe to
+     embed in onclick handlers and data attributes. */
+  const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
+  const asStr = (v, max) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, max);
+  const asNum = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const asDigits = v => asStr(v, 20).replace(/\D/g, '');
+  function normalizeBooking(raw, docId) {
+    const b = raw && typeof raw === 'object' ? raw : {};
+    return {
+      id: asStr(docId, 64).replace(/[^A-Za-z0-9_-]/g, ''),
+      timestamp: asStr(b.timestamp, 40),
+      name: asStr(b.name, 100),
+      phone: asDigits(b.phone),
+      address: asStr(b.address, 500),
+      vehicle: asStr(b.vehicle, 60),
+      vehicleSlug: asStr(b.vehicleSlug, 40),
+      vehicleType: asStr(b.vehicleType, 30),
+      vehicleCC: asStr(b.vehicleCC, 10),
+      pickup: asStr(b.pickup, 40),
+      pickupFormatted: asStr(b.pickupFormatted, 60),
+      duration: asStr(b.duration, 30),
+      durationKey: asStr(b.durationKey, 10),
+      kmIncluded: asNum(b.kmIncluded),
+      rateType: asStr(b.rateType, 20),
+      outstation: !!b.outstation,
+      helmets: asNum(b.helmets),
+      raincoats: asNum(b.raincoats),
+      unlimitedKM: !!b.unlimitedKM,
+      rental: asNum(b.rental),
+      addons: asNum(b.addons),
+      unlimitedCost: asNum(b.unlimitedCost),
+      gst: asNum(b.gst),
+      deposit: asNum(b.deposit),
+      total: asNum(b.total),
+      emergencyName: asStr(b.emergencyName, 100),
+      emergencyPhone: asDigits(b.emergencyPhone),
+      status: STATUSES.includes(b.status) ? b.status : 'pending',
+    };
+  }
+
   const ADMIN_PASS = 'hyprride2026'; /* fallback only — email sign-in is in admin-auth.js */
 
   const VEHICLES = [
@@ -20,7 +101,7 @@
   };
 
   const $ = id => document.getElementById(id);
-  const rupee = n => '₹' + n.toLocaleString('en-IN');
+  const rupee = n => '₹' + (Number(n) || 0).toLocaleString('en-IN');
 
   /* ────────────── AUTH ────────────── */
   const loginScreen = $('loginScreen');
@@ -37,9 +118,9 @@
     refreshAll();
   }
 
-  /* AUTH DISABLED (2026-09-03, user request): page opens straight to the dashboard.
-     To re-enable, change the line below back to: if (isLoggedIn()) showDashboard(); */
-  showDashboard();
+  /* AUTH DISABLED (2026-09-03, user request): the dashboard is opened at the very end of this
+     file (next to startCloudSync), after every variable it needs exists. To re-enable auth,
+     guard that call with isLoggedIn(). */
 
   // Password eye toggle
   const loginEye = $('loginEye');
@@ -228,11 +309,11 @@
       const pickupStr = b.pickupFormatted || formatDate(b.pickup);
       const next = NEXT_STATUS[b.status];
 
-      return `<tr data-id="${b.id}">
+      return `<tr data-id="${esc(b.id)}">
         <td>
           <div class="rider-cell">
             <span class="rider-name">${esc(b.name)}</span>
-            <span class="rider-phone">+91 ${b.phone}</span>
+            <span class="rider-phone">+91 ${esc(b.phone)}</span>
           </div>
         </td>
         <td>${esc(b.vehicle)}</td>
@@ -240,7 +321,7 @@
         <td>${esc(b.duration)}</td>
         <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
         <td><strong>${rupee(b.total)}</strong></td>
-        <td><span class="status-badge ${statusClass}">${b.status}</span></td>
+        <td><span class="status-badge ${esc(statusClass)}">${esc(b.status)}</span></td>
         <td>
           <div class="action-btns">
             ${next ? `<button class="quick-btn ${next.cls}" title="Mark as ${next.to}" onclick="window.adminActions.quickStatus('${b.id}','${next.to}')">${next.label}</button>` : ''}
@@ -332,22 +413,22 @@
         <div class="modal-section-title">Rider Details</div>
         <dl class="modal-dl">
           <dt>Name</dt><dd>${esc(b.name)}</dd>
-          <dt>Phone</dt><dd>+91 ${b.phone}</dd>
+          <dt>Phone</dt><dd>+91 ${esc(b.phone)}</dd>
           ${b.address ? `<dt>Address</dt><dd>${esc(b.address)}</dd>` : ''}
-          ${b.emergencyName ? `<dt>Emergency</dt><dd>${esc(b.emergencyName)}${b.emergencyPhone ? ' (+91 ' + b.emergencyPhone + ')' : ''}</dd>` : ''}
+          ${b.emergencyName ? `<dt>Emergency</dt><dd>${esc(b.emergencyName)}${b.emergencyPhone ? ' (+91 ' + esc(b.emergencyPhone) + ')' : ''}</dd>` : ''}
         </dl>
       </div>
 
       <div class="modal-section">
         <div class="modal-section-title">Ride Details</div>
         <dl class="modal-dl">
-          <dt>Vehicle</dt><dd>${esc(b.vehicle)} · ${b.vehicleType} · ${b.vehicleCC}cc</dd>
-          <dt>Pickup</dt><dd>${b.pickupFormatted || formatDate(b.pickup)}</dd>
-          <dt>Duration</dt><dd>${esc(b.duration)} · ${b.kmIncluded} km included</dd>
+          <dt>Vehicle</dt><dd>${esc(b.vehicle)} · ${esc(b.vehicleType)} · ${esc(b.vehicleCC)}cc</dd>
+          <dt>Pickup</dt><dd>${esc(b.pickupFormatted || formatDate(b.pickup))}</dd>
+          <dt>Duration</dt><dd>${esc(b.duration)} · ${Number(b.kmIncluded) || 0} km included</dd>
           <dt>Rate Type</dt><dd>${esc(b.rateType)} slab</dd>
           <dt>Trip Type</dt><dd>${b.outstation ? '🗺️ Outstation' : 'In-city'}</dd>
-          <dt>Helmets</dt><dd>${b.helmets}</dd>
-          <dt>Raincoats</dt><dd>${b.raincoats}</dd>
+          <dt>Helmets</dt><dd>${Number(b.helmets) || 0}</dd>
+          <dt>Raincoats</dt><dd>${Number(b.raincoats) || 0}</dd>
           <dt>Unlimited KM</dt><dd>${b.unlimitedKM ? 'Yes' : 'No'}</dd>
         </dl>
       </div>
@@ -424,6 +505,7 @@
       if (idx === -1) return;
       bookings[idx].status = status;
       saveBookings(bookings);
+      cloudUpdate(id, { status: status });
       openBookingModal(id); // refresh modal
       refreshAll();
     },
@@ -434,6 +516,7 @@
       if (idx === -1) return;
       bookings[idx].status = status;
       saveBookings(bookings);
+      cloudUpdate(id, { status: status });
       refreshAll();
       toast(status === 'confirmed'
         ? '✓ Booking confirmed — ' + (bookings[idx].name || 'rider')
@@ -445,6 +528,7 @@
       let bookings = getBookings();
       bookings = bookings.filter(b => b.id !== id);
       saveBookings(bookings);
+      cloudDelete(id);
       closeModal();
       refreshAll();
     },
@@ -453,6 +537,7 @@
       const fleet = getFleetAvailability();
       fleet[slug] = available;
       saveFleetAvailability(fleet);
+      cloudFleet(fleet);
       renderFleet();
     },
 
@@ -545,5 +630,33 @@
     refreshAll();
     if (grew) toast('🔔 New booking request received');
   }, 4000);
+
+  /* ────────────── CLOUD SYNC — Firestore is the shared source of truth ────────────── */
+  let cloudFirstLoad = true;
+  function startCloudSync() {
+    if (!db) return;
+    db.collection('bookings').orderBy('timestamp', 'desc').limit(500).onSnapshot(snap => {
+      if (snap.metadata.fromCache && snap.empty) return; // offline at load: keep what we already show
+      const raw = JSON.stringify(snap.docs.map(d => normalizeBooking(d.data(), d.id)).filter(b => b.id));
+      const prev = lastSnapshot;
+      localStorage.setItem('hyprride_bookings', raw); // mirror → getBookings() keeps working unchanged
+      lastSnapshot = raw;
+      refreshAll();
+      if (cloudFirstLoad) { cloudFirstLoad = false; return; }
+      let grew = false;
+      try { grew = JSON.parse(raw).length > JSON.parse(prev).length; } catch { /* ignore */ }
+      if (grew) toast('🔔 New booking request received');
+    }, err => {
+      console.error('Firestore bookings sync failed', err);
+      toast('⚠ Cloud sync failed — ' + (err.code || err.message));
+    });
+
+    db.collection('settings').doc('fleet').onSnapshot(doc => {
+      localStorage.setItem('hyprride_fleet', JSON.stringify(doc.exists ? doc.data() : {}));
+      renderFleet();
+    }, err => console.error('Firestore fleet sync failed', err));
+  }
+  showDashboard();
+  startCloudSync();
 
 })();
