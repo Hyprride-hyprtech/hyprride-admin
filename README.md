@@ -1,32 +1,26 @@
-# HYPRRIDE — staff admin panel
+# HYPRRIDE — staff sign-in
 
-Internal booking board for HYPRRIDE. Served by GitHub Pages at
-<https://hyprride-hyprtech.github.io/hyprride-admin/>.
+Served by GitHub Pages at <https://hyprride-hyprtech.github.io/hyprride-admin/>.
+Deliberately **not** on a custom domain and not linked from the public site.
 
-Deliberately **not** on a custom domain — no `CNAME` file here, so it never appears
-under hyprride.com and nothing on the public site links to it.
+Bookings moved to Hyprverse: the website's booking pages forward customers there, and staff
+manage bookings in the Hyprverse console. This page sends staff to the Hyprverse sign-in
+(<https://hyprverse.in/login>), where the Hyprverse server checks who they are. Owner accounts
+can sign in with a 6-digit code sent by email; team members use their Staff password.
+
+The page has no Firebase, no password, no customer data, and makes no network requests (its
+Content-Security-Policy is `default-src 'none'`). Its one script deletes the copy of old bookings
+that the previous booking board kept in each staff browser.
 
 | File | What it is |
 |---|---|
-| `index.html` | The panel — Overview, Bookings, Fleet tabs |
-| `admin.css` / `admin.js` | Styles / board logic, status actions, live poll |
-| `admin-auth.js` | Firebase email one-time-link sign-in + allowed-staff list |
+| `index.html` | The sign-in page |
+| `admin.css` | Its styles |
+| `admin.js` | Deletes the old board's booking copy from the browser |
 
-## Sign-in
+## History
 
-Staff email → one-time link by email. Allowed addresses are in `ALLOWED_EMAILS` at the
-top of `admin-auth.js`. The Firebase project must list this host under
-**Authentication → Settings → Authorized domains**.
-
-If Firebase is unreachable, a password form appears as a fallback.
-
-> **This repo is public**, which is what free GitHub Pages requires. Treat the fallback
-> password as public knowledge and rely on the email link as the real gate. Do not put
-> customer data, keys or secrets in this repo. The Firebase config here is a client ID,
-> which is safe to publish by design.
-
-## Known limitation
-
-The site is static, so bookings live in the browser they were made in. This board shows
-bookings made on the same device — customer bookings arrive by WhatsApp, which stays the
-source of truth.
+Until 26 Nov 2026 this was a booking board on an old Firebase database whose bookings anyone
+could read. That database is retired. **This repo is public:** never put customer data,
+keys or a password check in it. A password written into a page's code protects nothing, because
+anyone can read the code.
